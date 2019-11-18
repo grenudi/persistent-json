@@ -11,9 +11,9 @@ MANAGE efficiency:
 
 //rewrite the whole thing on file streams
 const fs = require("fs");
-const {fork} = require("child_process");
-const {encode, decode} = require("serialize-json");
-JSON.encode = encode; JSON.decode = decode;
+const {spawn} = require("child_process");
+const enc = require("serialize-json").encode;
+const dec = require("serialize-json").decode;
 
 //write through worker
 //read is sync in main
@@ -26,23 +26,30 @@ const syncInitGlobal = function(name,data){
 
 const main = function(filePath, options={}){
 
+    let encode = options.encode;
+    let decode = options.decode;
+
+    if(!(encode? decode : !decode)) { throw Error("no encode or decode option")}
+
+    encode = encode || JSON.stringify ;
+    decode = decode || JSON.parse ;
+
     let main = this;
 
-    this.rewrite = function(obj){
-        this.original = obj;
-        this.proxy = global[this.path+"proxy"] = new Proxy(this.original, this.proxyHandle);
-        this.write(this.original);
-        return this;
-    }
-    this.sync = function(){
-        return this.proxy;
-    }
     this.write = function(data){
-        this.worker.send({cmd:"write", data:{ path:this.path, content: JSON.encode(data)}});
+        console.warn("WRITING: ",data);
+        fs.writeFile(filePath,encode(data),(err)=>{});
+        //async write!
+        // this.worker.send({cmd:"write", data:{ path:filePath, content: encode(data)}});
+        // const child = spawn('node', ['timer.js'], {
+        // detached: true,
+        // stdio: 'ignore'
+        // });
+
+        // child.unref();
     }
     this.proxyHandle = {
         set(obj, prop, value) {
-            console.error("SETTING----------------------");
             main.write();
             Reflect.set(...arguments)
             return true;
@@ -61,31 +68,32 @@ const main = function(filePath, options={}){
             return true;
         }
     }
-
-    this.path = filePath;
-    this.original = syncInitGlobal(this.path, {});
-    this.proxy = syncInitGlobal(this.path+"proxy", new Proxy(this.original, this.proxyHandle));
-    this.worker; 
-
-    if(!options.crossfeed && global[this.path]){
+    this.rewrite = function(obj){
+        global[filePath] = obj;
+        Object.assign(global[filePath+"proxy"], new Proxy(global[filePath], this.proxyHandle));
+        fs.writeFileSync(filePath,encode(global[filePath]));
+        return this;
+    }
+//LOGIC///////////////////////////
+    if(!options.crossfeed && global[filePath]){
         throw Error("this file is already in use by other object, and no crossfeed specified in options");
     }
 
-    if(!global.worker123){
-        this.worker = global.worker123 = fork("worker.js");
-    }else{
-        this.worker = global.worker123;
+    if(!global[filePath+"proxy"]){
+        try{
+            console.warn("READING: "+filePath);
+            global[filePath] = decode(fs.readFileSync(filePath));
+        }catch(err){
+            console.warn("FAILED TO READ: \n"+err);
+            global[filePath] = {};
+            fs.writeFileSync(encode(global[filePath]));
+        }
+        global[filePath+"proxy"] = new Proxy(global[filePath], this.proxyHandle);
+    } 
+//GETTERS////////////////////////
+    this.sync = function(){
+        return global[filePath];
     }
-
-    try{
-        this.original = global[filePath] = JSON.decode(fs.readFileSync(this.path, 'utf8'));
-        this.proxy = global[filePath+"proxy"] = new Proxy(this.original, this.proxyHandle);
-    }catch(err){
-        console.warn("FAILED TO READ: \n"+err);
-        this.original = {};
-        fs.writeFileSync(this.path,JSON.encode(this.original));
-    }
-
 }
 main.prototype.cutName = function(path){
     const unix =  path.split("/");
