@@ -1,0 +1,25 @@
+{
+  "name": "persistent-json",
+  "version": "1.0.2",
+  "description": "module to sync json object content with json file",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "persistent",
+    "json",
+    "sync",
+    "object",
+    "file"
+  ],
+  "author": "grenudi",
+  "license": "MIT",
+  "dependencies": {
+    "serialize-json": "^1.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^6.6.0",
+    "jest": "^24.9.0"
+  }
+}
