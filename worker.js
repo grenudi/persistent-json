@@ -1,11 +1,13 @@
 const fs = require("fs");
 
-let que = [];
-
 process.on('message', (msg) => {
     switch(msg.cmd){
         case "write":
-            que.push(msg.data);
+            try{
+                fs.writeFileSync(msg.data.path, msg.data.content);
+            }catch(err){
+                process.send({cmd:"error",data:err});
+            }
         break;
     }
     console.log('Message from parent:', msg);

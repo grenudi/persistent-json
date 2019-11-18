@@ -4,7 +4,8 @@
   "description": "module to sync json object content with json file",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "debugTest": "jest --detectOpenHandles"
   },
   "keywords": [
     "persistent",

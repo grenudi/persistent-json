@@ -33,40 +33,28 @@ const main = function(filePath, options={}){
 
     let worker;
 
-    worker = syncInitGlobal("worker123",'fork("worker.js")');
+    if(!global.worker123){
+        worker = global.worker123 = fork("worker.js");
+    }else{
+        worker = global.worker123;
+    }
     original = syncInitGlobal(filePath, {});
     proxy = syncInitGlobal(filePath+"proxy", {});
 
     try{
         original = JSON.decode(fs.readFileSync(filePath, 'utf8'));
     }catch(err){
-        console.error("FAILED TO READ: \n"+err);
+        console.warn("FAILED TO READ: \n"+err);
         original = {};
         fs.writeFileSync(filePath,JSON.encode(original));
     }
 
-    function updateFromFile(eventType, filename){
-        switch(eventType){
-            case 'rename': 
-            break;
-            case 'change': 
-                original = JSON.parse(fs.readFileSync(path, 'utf8'));
-            break;
-        }
-    }
-
-    if(options.watch){
-        watcher = watch(path, updateFromFile);
-    }
-
     function handler(){}
-
-    proxy = new Proxy(original, handler);
 
     this.rewrite = function(obj){
         original = obj;
-        proxy = new Proxy(original, handler);
-        this.write(filePath, obj);
+        proxy = global[filePath+"proxy"] = new Proxy(original, handler);
+        worker.send({cmd:"write", data:{ path: filePath, content: JSON.encode(obj)}});
         return this;
     }
     this.sync = function(){
@@ -75,9 +63,6 @@ const main = function(filePath, options={}){
 }
 main.prototype.write = function(path,obj){
     fs.writeFileSync(path, JSON.encode(obj));
-}
-main.prototype.isJson = function(path){
-    
 }
 main.prototype.watch = function(path,cb){
     return fs.watch(path,{persistent: false}, cb);
