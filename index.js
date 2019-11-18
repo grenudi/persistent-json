@@ -25,47 +25,67 @@ const syncInitGlobal = function(name,data){
 }
 
 const main = function(filePath, options={}){
-    let dir = this.cutDir(filePath);
-    let file = this.cutName(filePath);
 
-    let original;
-    let proxy;
-
-    let worker;
-
-    if(!global.worker123){
-        worker = global.worker123 = fork("worker.js");
-    }else{
-        worker = global.worker123;
-    }
-    original = syncInitGlobal(filePath, {});
-    proxy = syncInitGlobal(filePath+"proxy", {});
-
-    try{
-        original = JSON.decode(fs.readFileSync(filePath, 'utf8'));
-    }catch(err){
-        console.warn("FAILED TO READ: \n"+err);
-        original = {};
-        fs.writeFileSync(filePath,JSON.encode(original));
-    }
-
-    function handler(){}
+    let main = this;
 
     this.rewrite = function(obj){
-        original = obj;
-        proxy = global[filePath+"proxy"] = new Proxy(original, handler);
-        worker.send({cmd:"write", data:{ path: filePath, content: JSON.encode(obj)}});
+        this.original = obj;
+        this.proxy = global[this.path+"proxy"] = new Proxy(this.original, this.proxyHandle);
+        this.write(this.original);
         return this;
     }
     this.sync = function(){
-        return proxy;
+        return this.proxy;
     }
-}
-main.prototype.write = function(path,obj){
-    fs.writeFileSync(path, JSON.encode(obj));
-}
-main.prototype.watch = function(path,cb){
-    return fs.watch(path,{persistent: false}, cb);
+    this.write = function(data){
+        this.worker.send({cmd:"write", data:{ path:this.path, content: JSON.encode(data)}});
+    }
+    this.proxyHandle = {
+        set(obj, prop, value) {
+            console.error("SETTING----------------------");
+            main.write();
+            Reflect.set(...arguments)
+            return true;
+        },
+        deleteProperty(target, prop) {
+            if (prop in target) {
+              delete target[prop];
+              main.write();
+              return true;
+            }
+            return false;
+        },
+        defineProperty(target, key, descriptor) {
+            target[key] = null;
+            main.write();
+            return true;
+        }
+    }
+
+    this.path = filePath;
+    this.original = syncInitGlobal(this.path, {});
+    this.proxy = syncInitGlobal(this.path+"proxy", new Proxy(this.original, this.proxyHandle));
+    this.worker; 
+
+    if(!options.crossfeed && global[this.path]){
+        throw Error("this file is already in use by other object, and no crossfeed specified in options");
+    }
+
+    if(!global.worker123){
+        this.worker = global.worker123 = fork("worker.js");
+    }else{
+        this.worker = global.worker123;
+    }
+
+    try{
+        this.original = global[filePath] = JSON.decode(fs.readFileSync(this.path, 'utf8'));
+        this.proxy = global[filePath+"proxy"] = new Proxy(this.original, this.proxyHandle);
+    }catch(err){
+        console.warn("FAILED TO READ: \n"+err);
+        this.original = {};
+        fs.writeFileSync(this.path,JSON.encode(this.original));
+    }
+
 }
 main.prototype.cutName = function(path){
     const unix =  path.split("/");

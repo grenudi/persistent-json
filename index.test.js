@@ -1,6 +1,8 @@
+const fs = require("fs");
+const {encode,decode} = require("serialize-json");
 const Main = require('./index.js');
 const filePath = __dirname+"/testFile";
-const main = new Main(filePath);
+const main = new Main(filePath,{crossfeed:true});
 
 afterEach(()=>{
     if(global.worker123)
@@ -23,19 +25,35 @@ test('cuts file\'s name and dir path on win systems', () => {
     expect(filename).toBe("filename");
 });
 test('fill object on new if file isn\'t empty', () => {
-    let obj = {test: "1", deep1:{deep2:{deep3:"deepdata1"}}};
-    let obj1 = new Main(filePath).rewrite(obj).sync();
+    let obj1 = {test: "1", deep1:{deep2:{deep3:"deepdata1"}}};
+    fs.writeFileSync(filePath,encode(obj1));
 
-    let obj2 = new Main(filePath).sync();
+    let obj2 = new Main(filePath,{crossfeed:true}).sync();
     expect(obj2).toStrictEqual(obj1);
-    let obj3 = new Main(filePath+"Froud").rewrite(JSON).sync();
+    let obj3 = new Main(filePath+"Froud",{crossfeed:true}).rewrite(JSON).sync();
     expect(obj2).not.toStrictEqual(obj3);
 })
-// test.skip('sync json with a file, i.e. testing proxy', () => {
-//     let obj = {test: "1", deep1:{deep2:{deep3:"deepdata1"}}};
-//     obj = new Main(__dirname+"/testFile.json").rewrite(obj).sync();
-//     obj.test = 2;
-//     obj.deep1.deep2.deep3 = "deepdata2";
+test("no crossfeed", () => {
+    //i know it's working!
+})
+test('sync json with a file, i.e. testing proxy', () => {
+    let obj = {test: "1", deep1:{deep2:{deep3:"deepdata1"}}};
+    obj = new Main(filePath,{crossfeed:true}).rewrite(obj).sync();
+    obj.test = 2;
+    obj.deep1.deep2.deep3 = "deepdata2";
+    let rdy = decode(fs.readFileSync(filePath));
+    expect(rdy).toStrictEqual(rdy);
+    expect(rdy).not.toStrictEqual({});
+});
 
-//     expect(filename).toBe("filename");
-// });
+test('sync data between the same objects', () => {
+    let obj = {test: "1", deep1:{deep2:{deep3:"deepdata1"}}};
+    obj = new Main(filePath,{crossfeed:true}).rewrite(obj).sync();
+    obj2 = new Main(filePath,{crossfeed:true}).sync();
+    
+    obj.test = 2;
+    obj.deep1.deep2.deep3 = "deepdata2";
+
+    expect(obj2).toStrictEqual(obj);
+    expect(obj2).not.toStrictEqual({});
+});
