@@ -106,5 +106,6 @@ main.prototype.cutDir = function(path){
     return win.length > 1 ? path.replace("\\"+win[win.length-1],"") : path.replace("/"+unix[unix.length-1],"");
 }
 
+let test = new main();
 module.exports = main;
 
