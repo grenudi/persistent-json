@@ -1,6 +1,10 @@
 {
   "name": "persistent-json",
-  "version": "1.0.2",
+  "version": "1.0.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/grenudi/persistent-json"
+  },
   "description": "module to sync json object content with json file",
   "main": "index.js",
   "scripts": {
