@@ -11,9 +11,6 @@ MANAGE efficiency:
 
 //rewrite the whole thing on file streams
 const fs = require("fs");
-const {spawn} = require("child_process");
-const enc = require("serialize-json").encode;
-const dec = require("serialize-json").decode;
 
 //write through worker
 //read is sync in main
@@ -94,16 +91,6 @@ const main = function(filePath, options={}){
     this.sync = function(){
         return global[filePath];
     }
-}
-main.prototype.cutName = function(path){
-    const unix =  path.split("/");
-    const win = path.split("\\");
-    return win.length > 1 ? win[win.length-1] : unix[unix.length-1]
-}
-main.prototype.cutDir = function(path){
-    const unix =  path.split("/");
-    const win = path.split("\\");
-    return win.length > 1 ? path.replace("\\"+win[win.length-1],"") : path.replace("/"+unix[unix.length-1],"");
 }
 
 let test = new main();

@@ -1,7 +1,7 @@
 const fs = require("fs");
-const {encode,decode} = require("serialize-json");
 const Main = require('./index.js');
 const filePath = __dirname+"\\testFile";
+
 // const main = new Main(filePath,{crossfeed:true});
 
 beforeEach(()=>{
@@ -62,11 +62,18 @@ afterEach(()=>{
 // })
 test("write object encoded to file on .rewrite", ()=>{
     let obj = {test: "1", deep1:{deep2:{deep3:"deepdata1"}}};
-    let po = new Main(filePath,{crossfeed:true}).rewrite(obj).sync();
+
+    let po = new Main(filePath,{crossfeed:true).rewrite(obj).sync();
+
+    po.key = "znachenie";
+
     console.warn("WRITTEN: ",fs.readFileSync(filePath));
+
     const rdy = JSON.parse(fs.readFileSync(filePath));
+
     console.warn("OBJ: "+JSON.stringify(obj));
     console.warn("RDY: "+JSON.stringify(rdy));
+
     expect(rdy).toStrictEqual(obj);
     expect(rdy).not.toStrictEqual({test:"test"});
 })
