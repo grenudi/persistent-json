@@ -1,6 +1,6 @@
 {
   "name": "persistent-json",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/grenudi/persistent-json"
